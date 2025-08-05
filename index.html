@@ -2,64 +2,72 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <title>我的薪資 vs 台灣 CPI 年增率</title>
+  <meta charset="UTF-8" />
+  <title>台灣CPI對薪資影響儀表板</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: "Noto Sans TC", sans-serif; padding: 2em; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
-    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
-    th { background-color: #f0f0f0; }
-    input { padding: 5px; font-size: 16px; }
-    button { padding: 6px 12px; font-size: 16px; margin-left: 10px; }
+    body { font-family: sans-serif; padding: 20px; }
+    canvas { max-width: 100%; }
+    h1 { font-size: 24px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <h1>💰 我的年薪 vs 台灣 CPI 年增率 儀表板</h1>
-
-  <label for="income">請輸入你的年薪（新台幣）：</label>
-  <input type="number" id="income" value="600000">
-  <button onclick="updateTable()">更新</button>
-
-  <table>
-    <thead>
-      <tr>
-        <th>CPI 項目</th>
-        <th>年增率 (%)</th>
-        <th>對你年花費的估算影響（元）</th>
-      </tr>
-    </thead>
-    <tbody id="cpiTableBody"></tbody>
-  </table>
-
+  <h1>台灣CPI對薪資影響儀表板</h1>
+  <p>自動讀取原始 JSON 結構並顯示最新一期 CPI 年增率</p>
+  <canvas id="cpiChart"></canvas>
   <script>
-    let cpiData = [];
+    async function fetchAndDraw() {
+      const response = await fetch('./data.json');
+      const rawData = await response.json();
 
-    fetch('data.json')
-      .then(res => res.json())
-      .then(data => {
-        cpiData = data;
-        updateTable();
-      })
-      .catch(err => {
-        alert("讀取 CPI 資料失敗，請確認 data.json 是否放在同一目錄下。");
-        console.error(err);
-      });
+      const columns = rawData.colh[0];
+      const rows = rawData.row.map(r => r[0]);
+      const latestIndex = rawData.orgdata.length - 1;
+      const latestValues = rawData.orgdata[latestIndex];
+      const latestLabel = rows[latestIndex];
 
-    function updateTable() {
-      const income = parseFloat(document.getElementById("income").value);
-      const tbody = document.getElementById("cpiTableBody");
-      tbody.innerHTML = "";
+      const categories = [];
+      const rates = [];
 
-      cpiData.forEach(item => {
-        const impact = Math.round(income * item.weight * item.rate / 100);
-        const row = `<tr>
-          <td>${item.category}</td>
-          <td>${item.rate.toFixed(2)}</td>
-          <td>${impact.toLocaleString()}</td>
-        </tr>`;
-        tbody.innerHTML += row;
+      for (let i = 0; i < columns.length; i++) {
+        const name = columns[i].trim();
+        if (name && latestValues[i] !== undefined) {
+          categories.push(name);
+          rates.push(latestValues[i]);
+        }
+      }
+
+      const ctx = document.getElementById('cpiChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: categories,
+          datasets: [{
+            label: latestLabel + ' 年增率 (%)',
+            data: rates,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: '消費者物價指數（CPI）年增率'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => value + '%' }
+            }
+          }
+        }
       });
     }
+
+    fetchAndDraw();
   </script>
 </body>
 </html>
