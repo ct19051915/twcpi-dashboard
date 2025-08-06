@@ -1,43 +1,71 @@
 
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <title>台灣 CPI 折算購買力模擬</title>
-    <style>
-        body { font-family: sans-serif; padding: 2em; }
-        table { border-collapse: collapse; width: 100%; margin-top: 2em; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-        th { background-color: #eee; }
-        input { width: 80px; font-size: 1em; }
-    </style>
+  <meta charset="UTF-8">
+  <title>台灣 CPI 年增率資料表</title>
+  <style>
+    body { font-family: "Arial", sans-serif; margin: 40px; }
+    h1, h2 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    th { background-color: #f5f5f5; }
+    #output { margin-top: 20px; font-size: 18px; }
+  </style>
 </head>
 <body>
-    <h1>台灣 CPI 折算購買力模擬</h1>
-    <label for="asset">假設目前資產為 <input type="number" id="asset" value="100"> 萬元：</label>
-    <div id="result" style="margin-top: 1em; font-size: 1.2em;"></div>
-    <script>
-        const cpiData = {
-            "113年1月至6月": 2.27,
-            "114年1月至6月": 1.93
-        };
+  <h1>台灣 CPI 年增率資料表</h1>
+  <table id="cpiTable">
+    <thead>
+      <tr>
+        <th>品項</th>
+        <th>113年1-6月</th>
+        <th>114年1-6月</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-        const resultDiv = document.getElementById("result");
-        const input = document.getElementById("asset");
+  <h2>資產購買力模擬</h2>
+  <label for="amount">假設目前資產為 <input type="number" id="amount" value="100" /> 萬元：</label>
+  <div id="output"></div>
 
-        function updateResult() {
-            const amount = parseFloat(input.value);
-            let html = "";
-            for (const [period, cpi] of Object.entries(cpiData)) {
-                const factor = 1 / (1 + cpi / 100);
-                const adjusted = (amount * factor).toFixed(1);
-                html += `<p>${period}：以當期物價水準，折算購買力約為 ${adjusted} 萬元</p>`;
-            }
-            resultDiv.innerHTML = html;
+  <script>
+    async function loadData() {
+      const response = await fetch("data.json");
+      const data = await response.json();
+      const tbody = document.querySelector("#cpiTable tbody");
+      tbody.innerHTML = "";
+      let rate113 = 0, rate114 = 0;
+
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.品項}</td><td>${row["113年1-6月"]}</td><td>${row["114年1-6月"]}</td>`;
+        tbody.appendChild(tr);
+        if (row.品項 === "總指數") {
+          rate113 = parseFloat(row["113年1-6月"]);
+          rate114 = parseFloat(row["114年1-6月"]);
         }
+      });
 
-        input.addEventListener("input", updateResult);
-        updateResult();
-    </script>
+      const amountInput = document.getElementById("amount");
+      const outputDiv = document.getElementById("output");
+
+      function updateOutput() {
+        const base = parseFloat(amountInput.value);
+        const buying113 = (base / (1 + rate113 / 100)).toFixed(1);
+        const buying114 = (base / (1 + rate114 / 100)).toFixed(1);
+        outputDiv.innerHTML = `
+          <p>113年1月至6月：推估購買力約為 <strong>${buying113}</strong> 萬元</p>
+          <p>114年1月至6月：推估購買力約為 <strong>${buying114}</strong> 萬元</p>
+        `;
+      }
+
+      amountInput.addEventListener("input", updateOutput);
+      updateOutput();
+    }
+
+    loadData();
+  </script>
 </body>
 </html>
