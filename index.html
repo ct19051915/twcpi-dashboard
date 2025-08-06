@@ -1,57 +1,43 @@
 
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>台灣 CPI 年增率資料表</title>
+    <title>台灣 CPI 折算購買力模擬</title>
     <style>
         body { font-family: sans-serif; padding: 2em; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 2em; }
-        th, td { border: 1px solid #ccc; padding: 0.5em; text-align: center; }
-        th { background-color: #f2f2f2; }
-        input[type="number"] { width: 100px; padding: 5px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 2em; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #eee; }
+        input { width: 80px; font-size: 1em; }
     </style>
 </head>
 <body>
-    <h1>台灣 CPI 年增率資料表</h1>
-    <table id="cpi-table">
-        <thead>
-            <tr><th>品項</th><th>113年1-6月</th><th>114年1-6月</th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <h2>年薪購買力模擬</h2>
-    <p>假設原始年薪為 <input type="number" id="salaryInput" value="100"> 萬元：</p>
-    <p id="result113"></p>
-    <p id="result114"></p>
-
+    <h1>台灣 CPI 折算購買力模擬</h1>
+    <label for="asset">假設目前資產為 <input type="number" id="asset" value="100"> 萬元：</label>
+    <div id="result" style="margin-top: 1em; font-size: 1.2em;"></div>
     <script>
-        async function loadData() {
-            const res = await fetch('data.json');
-            const data = await res.json();
+        const cpiData = {
+            "113年1月至6月": 2.27,
+            "114年1月至6月": 1.93
+        };
 
-            const tbody = document.querySelector('#cpi-table tbody');
-            tbody.innerHTML = '';
-            data.cpi.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${row.item}</td><td>${row["113"]}</td><td>${row["114"]}</td>`;
-                tbody.appendChild(tr);
-            });
+        const resultDiv = document.getElementById("result");
+        const input = document.getElementById("asset");
 
-            function updateSalary() {
-                const salary = parseFloat(document.getElementById('salaryInput').value);
-                const rate113 = parseFloat(data.summary["113"]);
-                const rate114 = parseFloat(data.summary["114"]);
-                document.getElementById('result113').textContent = `113年1月至6月：推估購買力約為 ${(salary * (1 - rate113 / 100)).toFixed(1)} 萬元`;
-                document.getElementById('result114').textContent = `114年1月至6月：推估購買力約為 ${(salary * (1 - rate114 / 100)).toFixed(1)} 萬元`;
+        function updateResult() {
+            const amount = parseFloat(input.value);
+            let html = "";
+            for (const [period, cpi] of Object.entries(cpiData)) {
+                const factor = 1 / (1 + cpi / 100);
+                const adjusted = (amount * factor).toFixed(1);
+                html += `<p>${period}：以當期物價水準，折算購買力約為 ${adjusted} 萬元</p>`;
             }
-
-            document.getElementById('salaryInput').addEventListener('input', updateSalary);
-            updateSalary();
+            resultDiv.innerHTML = html;
         }
 
-        loadData();
+        input.addEventListener("input", updateResult);
+        updateResult();
     </script>
 </body>
 </html>
